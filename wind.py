@@ -1,3 +1,5 @@
+# use freeze for requirements.txt
+
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import (
         QApplication, QGroupBox, QWidget, QLabel, QPushButton, QComboBox, QFrame, QMainWindow, QRadioButton, QCheckBox, QSpinBox , QVBoxLayout)
@@ -6,6 +8,15 @@ import sys
 import cv2
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread, QRect
 import numpy as np
+from PyQt5.QtChart import QChart, QChartView, QLineSeries
+from PyQt5.QtCore import QPointF
+from PyQt5.QtGui import QPainter
+import random as r
+
+
+
+listx = []
+listy = []
 
 
 class VideoThread(QThread):
@@ -17,11 +28,16 @@ class VideoThread(QThread):
 
     def run(self):
         # capture from web cam
-        cap = cv2.VideoCapture(0)
+        cap = cv2.VideoCapture(0) #rtsp
         while self._run_flag:
             ret, cv_img = cap.read()
             if ret:
                 self.change_pixmap_signal.emit(cv_img)
+        
+
+            listx.append(r.randint(0,10))
+            listy.append(r.randint(0,10))
+            #print(listx)
         # shut down capture system
         cap.release()
 
@@ -35,6 +51,52 @@ class VideoThread(QThread):
 # class MainWindow(QMainWindow):
 #     def __init__(self):
 #         super().__init__()
+
+
+class ChartWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+
+        self.setWindowTitle("PyQtChart Line")
+        self.setGeometry(100,100, 680,500)
+
+        #self.show()
+        self.create_linechart()
+
+    def create_linechart(self):
+
+        # listx = [0,2,3,7,10]
+        # listy = [6,4,8,4,5]
+        print(len(listx))
+
+        series = QLineSeries(self)
+        for x,y in zip(listx,listy):
+            series.append(x,y)
+        # series.append(0,6)
+        # series.append(2, 4)
+        # series.append(3, 8)
+        # series.append(7, 4)
+        # series.append(10, 5)
+
+        series << QPointF(11, 1) << QPointF(13, 3) << QPointF(17, 6) << QPointF(18, 3) << QPointF(20, 2)
+
+
+        chart =  QChart()
+
+        chart.addSeries(series)
+        chart.createDefaultAxes()
+        chart.setAnimationOptions(QChart.SeriesAnimations)
+        chart.setTitle("Line Chart Example")
+
+        chart.legend().setVisible(True)
+        chart.legend().setAlignment(Qt.AlignBottom)
+
+
+        chartview = QChartView(chart)
+        chartview.setRenderHint(QPainter.Antialiasing)
+
+        self.setCentralWidget(chartview)
+
         
 
 
@@ -72,6 +134,7 @@ class App(QMainWindow):
         self.about = self.helpMenu.addAction("&About")  # Add option in Help
         self.about.setShortcut("F11") # display F11 as shortcut
         self.credits = self.helpMenu.addAction("&Credits") # Add another option in Help
+        self.credits.triggered.connect(self.openChart)
 
         # create frame for a set of checkbox
         self.frame1 = QGroupBox(self)
@@ -119,6 +182,11 @@ class App(QMainWindow):
         self.thread.change_pixmap_signal.connect(self.update_image)
         # start the thread
         self.thread.start()
+
+    def openChart(self):
+        print("Clicked")
+        self.char = ChartWindow()
+        self.char.show()
 
     def closeEvent(self, event):
         self.thread.stop()
