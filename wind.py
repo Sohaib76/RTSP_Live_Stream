@@ -12,11 +12,56 @@ from PyQt5.QtChart import QChart, QChartView, QLineSeries
 from PyQt5.QtCore import QPointF
 from PyQt5.QtGui import QPainter
 import random as r
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+from matplotlib import style
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+
 
 
 
 listx = []
 listy = []
+
+
+class Canvas(FigureCanvas):
+    def __init__(self, parent):
+        # fig, self.ax = plt.subplots(figsize=(5, 4), dpi=100)
+        # super().__init__(fig)
+        # self.setParent(parent)
+        fig = plt.figure()
+        super().__init__(fig)
+        self.ax1 = fig.add_subplot(1,1,1)
+
+
+        """ 
+        Matplotlib Script
+        """
+
+        style.use('fivethirtyeight')
+
+
+        # t = np.arange(0.0, 2.0, 0.01)
+        # s = 1 + np.sin(2 * np.pi * t)
+        
+        # self.ax.plot(t, s)
+
+        # self.ax.set(xlabel='time (s)', ylabel='voltage (mV)',
+        #        title='About as simple as it gets, folks')
+        # self.ax.grid()
+
+        xs = [0,1,2,3,4,5,6,7,8,9]
+        ys=[3,5,2,6,2,6,3,6,9,2]
+        count = 11
+
+        def animate(i):
+            print("animate")
+            xs.append(count + i)
+            ys.append(count + i)
+            self.ax.clear()
+            self.ax.plot(xs, ys)
+
+        ani = animation.FuncAnimation(fig, animate, interval=1000)
 
 
 class VideoThread(QThread):
@@ -185,8 +230,10 @@ class App(QMainWindow):
 
     def openChart(self):
         print("Clicked")
-        self.char = ChartWindow()
-        self.char.show()
+        # self.char = ChartWindow()
+        # self.char.show()
+        chart = Canvas(self)
+        chart.show()
 
     def closeEvent(self, event):
         self.thread.stop()
