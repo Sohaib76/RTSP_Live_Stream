@@ -14,12 +14,13 @@ import numpy as np
 import cv2
 from PyQt5.QtGui import QPixmap
 from PyQt5 import QtGui
+from os.path import expanduser
 
 
 
 class ApplicationWindow(QtWidgets.QMainWindow):
     '''
-    The PyQt5 main window.
+    The PyQt5 main window. (not used)
 
     '''
     def __init__(self):
@@ -66,6 +67,139 @@ class VideoThread(QtCore.QThread):
         """Sets run flag to False and waits for thread to finish"""
         self._run_flag = False
         self.wait()
+
+
+class FaceRecognizerWindow(QtWidgets.QWidget):
+    """
+    This "window" is a QWidget. If it has no parent, it
+    will appear as a free-floating window as we want.
+    """
+    def __init__(self):
+        super().__init__()
+        layout = QtWidgets.QVBoxLayout()
+        self.label = QtWidgets.QLabel("Another Window")
+        layout.addWidget(self.label)
+        self.setLayout(layout)
+
+        self.disply_width = 450
+        self.display_height = 300 #280
+
+        self.image_label = QtWidgets.QLabel(self)
+        self.image_label.move(40,40)
+        self.image_label.resize(self.disply_width, self.display_height)
+        self.textLabel = QtWidgets.QLabel('Webcam')
+
+        self.left = 10
+        self.top = 10
+        self.width = 800
+        self.height = 480
+        self.setGeometry(self.left, self.top, self.width, self.height)
+
+       
+        # Right Frame
+        self.frame2 = QtWidgets.QGroupBox(self)
+        self.frame2.setGeometry(QtCore.QRect(510, 40, 270, 300))
+
+        # Choose Directory
+        self.label = QtWidgets.QLabel('Default Path:', self.frame2)
+        self.label.move(10,23)
+        self.label1 = QtWidgets.QLabel('~none', self.frame2)
+        self.label1.setGeometry(QtCore.QRect(90, 20, 150, 20))
+        self.pushButton = QtWidgets.QPushButton(self.frame2)
+        self.pushButton.setText("~")
+        self.pushButton.clicked.connect(self.choose_directory)
+        self.pushButton.setGeometry(QtCore.QRect(230, 20, 30, 20))
+
+        # Name
+        self.label = QtWidgets.QLabel('Person Name:', self.frame2)
+        self.label.move(10,60)
+        self.textbox = QtWidgets.QLineEdit(self.frame2)
+        self.textbox.move(100, 58)
+        self.textbox.resize(100,20)
+        #self.textbox.text()
+
+        #Save , Train, Test
+        self.iscapture = False
+        self.count = 1
+        self.pushButton = QtWidgets.QPushButton(self)
+        self.pushButton.setText("Save")
+        self.pushButton.setGeometry(QtCore.QRect(50, 380, 60, 30))
+        self.pushButton2 = QtWidgets.QPushButton(self)
+        self.pushButton2.setText("Train")
+        self.pushButton2.setGeometry(QtCore.QRect(150, 380, 60, 30))
+        self.pushButton3 = QtWidgets.QPushButton(self)
+        self.pushButton3.setText("Test")
+        self.pushButton3.setGeometry(QtCore.QRect(250, 380, 60, 30))
+        self.pushButton.clicked.connect(self.save_frame)
+
+        
+
+        vbox = QtWidgets.QVBoxLayout()
+        # vbox.addWidget(self.image_label)
+        # vbox.addWidget(self.textLabel)
+        # set the vbox layout as the widgets layout
+        self.setLayout(vbox)
+
+        # create the video capture thread
+        self.thread = VideoThread()
+        # connect its signal to the update_image slot
+        self.thread.change_pixmap_signal.connect(self.update_image)
+        # start the thread
+        self.thread.start()
+
+    def choose_directory(self):
+        print("Hello1")
+        input_dir = QtWidgets.QFileDialog.getExistingDirectory(None, 'Select a folder:',expanduser("~"))
+        # self.ui.lineEdit_Directory.setText(input_dir)
+        print(input_dir)
+        self.label1.setText(input_dir)
+
+    def save_frame(self):
+        print("save")
+        self.iscapture = True
+        
+
+
+        
+
+
+
+
+
+
+
+    @QtCore.pyqtSlot(np.ndarray)
+    def update_image(self, cv_img):
+        """Updates the image_label with a new opencv image"""
+        qt_img = self.convert_cv_qt(cv_img)
+        if(self.iscapture):
+            print("update")
+            if (not os.path.exists("face_dataframes")):
+                os.mkdir("face_dataframes")
+            cv2.imwrite("face_dataframes/person{0}.jpeg".format(self.count), cv_img)
+            self.iscapture = False
+            self.count += 1
+        
+        if(self.count == 6):
+            print("greater")
+            self.pushButton.setEnabled(False)
+
+
+        self.image_label.setPixmap(qt_img)
+    
+    def convert_cv_qt(self, cv_img):
+        """Convert from an opencv image to QPixmap"""
+        rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
+        h, w, ch = rgb_image.shape
+        bytes_per_line = ch * w
+        convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
+        p = convert_to_Qt_format.scaled(self.disply_width, self.display_height, ) #Qt.KeepAspectRatio
+        return QPixmap.fromImage(p)
+
+    def closeEvent(self, event):
+        self.thread.stop()
+        event.accept()
+
 
 
 
@@ -134,10 +268,10 @@ class App(QtWidgets.QMainWindow):
         self.label.move(10,20)
 
         comboBox = QtWidgets.QComboBox(self.frame2)
+        comboBox.addItem("Face Recognizer")
         comboBox.addItem("Yolov5")
         comboBox.addItem("Yolact")
         comboBox.addItem("UNet")
-        comboBox.addItem("Other")
         # comboBox.move(50, 50)
         comboBox.setGeometry(10,50, 150, 30)
         comboBox.activated[str].connect(self.model_choice)
@@ -164,21 +298,23 @@ class App(QtWidgets.QMainWindow):
         ####################################
 
         # create a vertical box layout and add the two labels
-        vbox = QtWidgets.QVBoxLayout()
-        vbox.addWidget(self.image_label)
-        vbox.addWidget(self.textLabel)
-        # set the vbox layout as the widgets layout
-        self.setLayout(vbox)
+        # vbox = QtWidgets.QVBoxLayout()
+        # vbox.addWidget(self.image_label)
+        # vbox.addWidget(self.textLabel)
+        # # set the vbox layout as the widgets layout
+        # self.setLayout(vbox)
 
-        # create the video capture thread
-        self.thread = VideoThread()
-        # connect its signal to the update_image slot
-        self.thread.change_pixmap_signal.connect(self.update_image)
-        # start the thread
-        self.thread.start()
+        # # create the video capture thread
+        # self.thread = VideoThread()
+        # # connect its signal to the update_image slot
+        # self.thread.change_pixmap_signal.connect(self.update_image)
+        # # start the thread
+        # self.thread.start()
 
     def model_choice(self,text):
         print("model selected", text)
+        self.fr = FaceRecognizerWindow()
+        self.fr.show()
 
     def openChart(self):
         print("Clicked")
@@ -267,14 +403,12 @@ def get_next_datapoint():
         i = 0
     return d[i]
 
-# if __name__ == "__main__":
-#     qapp = QtWidgets.QApplication(sys.argv)
-#     app = ApplicationWindow()
-#     qapp.exec_()
 
 
 if __name__=="__main__":
     app = QtWidgets.QApplication(sys.argv)
-    a = App()
+    # a = App()
+    # a.show()
+    a = FaceRecognizerWindow()
     a.show()
     sys.exit(app.exec_())
