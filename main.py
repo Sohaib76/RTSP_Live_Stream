@@ -123,6 +123,8 @@ class RecognizerWindow(QtWidgets.QWidget):
         self.pushButton = QtWidgets.QPushButton(self)
         self.pushButton.setText("Add")
         self.pushButton.setGeometry(QtCore.QRect(50, 380, 60, 30))
+        self.pushButton.clicked.connect(self.readd)
+
 
 
         vbox = QtWidgets.QVBoxLayout()
@@ -134,6 +136,12 @@ class RecognizerWindow(QtWidgets.QWidget):
         self.thread = VideoThread()
         self.thread.change_pixmap_signal.connect(self.update_image)
         self.thread.start()
+    
+    def readd(self):
+        self.rfr = FaceRecognizerWindow()
+        self.rfr.show()
+        self.hide()
+
 
 
     @QtCore.pyqtSlot(np.ndarray)
@@ -294,6 +302,7 @@ class FaceRecognizerWindow(QtWidgets.QWidget):
         # event.accept()
         self.rw = RecognizerWindow()
         self.rw.show()
+        self.hide()
 
 
         
@@ -460,8 +469,11 @@ class App(QtWidgets.QMainWindow):
     def model_choice(self,text):
         print("model selected", text)
         if text == "Face Recognizer":
+            
             self.fr = FaceRecognizerWindow()
             self.fr.show()
+            self.hide()
+            
 
     def openChart(self):
         print("Clicked")
