@@ -15,6 +15,7 @@ import cv2
 from PyQt5.QtGui import QPixmap
 from PyQt5 import QtGui
 from os.path import expanduser
+import time
 
 
 
@@ -69,16 +70,14 @@ class VideoThread(QtCore.QThread):
         self.wait()
 
 
-class FaceRecognizerWindow(QtWidgets.QWidget):
-    """
-    This "window" is a QWidget. If it has no parent, it
-    will appear as a free-floating window as we want.
-    """
+
+class RecognizerWindow(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
+        self.setWindowTitle("Recognizer Window")
         layout = QtWidgets.QVBoxLayout()
-        self.label = QtWidgets.QLabel("Another Window")
-        layout.addWidget(self.label)
+        # self.label = QtWidgets.QLabel("Window")
+        # layout.addWidget(self.label)
         self.setLayout(layout)
 
         self.disply_width = 450
@@ -92,8 +91,108 @@ class FaceRecognizerWindow(QtWidgets.QWidget):
         self.left = 10
         self.top = 10
         self.width = 800
-        self.height = 480
+        self.height = 580
         self.setGeometry(self.left, self.top, self.width, self.height)
+
+        # Menu Bar
+        # self.menubar= self.menuBar() # add menu bar
+        # self.fileMenu = self.menubar.addMenu("&File")
+        # self.editMenu = self.menubar.addMenu("&Edit")
+        # self.viewMenu = self.menubar.addMenu("&View")
+        # self.helpMenu = self.menubar.addMenu("&Help")  # Add Help in menu bar
+        # self.about = self.helpMenu.addAction("&About")  # Add option in Help
+        # self.about.setShortcut("F11") # display F11 as shortcut
+        # self.credits = self.helpMenu.addAction("&Credits") # Add another option in Help
+        # self.analytics = self.viewMenu.addAction("&Analytics")
+
+        # Right Frame
+        self.frame2 = QtWidgets.QGroupBox(self)
+        self.frame2.setGeometry(QtCore.QRect(510, 40, 270, 300))
+
+
+        # List
+        self.listwidget = QtWidgets.QListWidget(self.frame2)
+        self.listwidget.insertItem(0, "Imran - 10:0:12 12 July 21")
+        self.listwidget.insertItem(1, "Rischard - 11:0:12 12 July 21")
+        self.listwidget.insertItem(2, "Jhon - 12:0:12 12 July 21")
+        self.listwidget.insertItem(3, "Irfan - 2:0:0 13 July 21")
+        self.listwidget.insertItem(4, "Farah - 5:10:0 13 July 21")
+        self.listwidget.setGeometry(0, 0, 270, 300)
+
+        # Add
+        self.pushButton = QtWidgets.QPushButton(self)
+        self.pushButton.setText("Add")
+        self.pushButton.setGeometry(QtCore.QRect(50, 380, 60, 30))
+
+
+        vbox = QtWidgets.QVBoxLayout()
+        # vbox.addWidget(self.image_label)
+        # vbox.addWidget(self.textLabel)
+        # set the vbox layout as the widgets layout
+        self.setLayout(vbox)
+
+        self.thread = VideoThread()
+        self.thread.change_pixmap_signal.connect(self.update_image)
+        self.thread.start()
+
+
+    @QtCore.pyqtSlot(np.ndarray)
+    def update_image(self, cv_img):
+        """Updates the image_label with a new opencv image"""
+        qt_img = self.convert_cv_qt(cv_img)
+        self.image_label.setPixmap(qt_img)
+    
+    def convert_cv_qt(self, cv_img):
+        """Convert from an opencv image to QPixmap"""
+        rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
+        h, w, ch = rgb_image.shape
+        bytes_per_line = ch * w
+        convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
+        p = convert_to_Qt_format.scaled(self.disply_width, self.display_height, ) #Qt.KeepAspectRatio
+        return QPixmap.fromImage(p)
+
+    def closeEvent(self, event):
+        self.thread.stop()
+        event.accept()
+
+
+class FaceRecognizerWindow(QtWidgets.QWidget):
+    """
+    This "window" is a QWidget. If it has no parent, it
+    will appear as a free-floating window as we want.
+    """
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Face Recognizer")
+        layout = QtWidgets.QVBoxLayout()
+        # self.label = QtWidgets.QLabel("Another Window")
+        # layout.addWidget(self.label)
+        self.setLayout(layout)
+
+        self.disply_width = 450
+        self.display_height = 300 #280
+
+        self.image_label = QtWidgets.QLabel(self)
+        self.image_label.move(40,40)
+        self.image_label.resize(self.disply_width, self.display_height)
+        self.textLabel = QtWidgets.QLabel('Webcam')
+
+        self.left = 10
+        self.top = 10
+        self.width = 800
+        self.height = 580
+        self.setGeometry(self.left, self.top, self.width, self.height)
+
+        # Menu Bar
+        # self.menubar= self.menuBar() # add menu bar
+        # self.fileMenu = self.menubar.addMenu("&File")
+        # self.editMenu = self.menubar.addMenu("&Edit")
+        # self.viewMenu = self.menubar.addMenu("&View")
+        # self.helpMenu = self.menubar.addMenu("&Help")  # Add Help in menu bar
+        # self.about = self.helpMenu.addAction("&About")  # Add option in Help
+        # self.about.setShortcut("F11") # display F11 as shortcut
+        # self.credits = self.helpMenu.addAction("&Credits") # Add another option in Help
+        # self.analytics = self.viewMenu.addAction("&Analytics")
 
        
         # Right Frame
@@ -103,12 +202,12 @@ class FaceRecognizerWindow(QtWidgets.QWidget):
         # Choose Directory
         self.label = QtWidgets.QLabel('Default Path:', self.frame2)
         self.label.move(10,23)
-        self.label1 = QtWidgets.QLabel('~none', self.frame2)
+        self.label1 = QtWidgets.QLabel('~default', self.frame2)
         self.label1.setGeometry(QtCore.QRect(90, 20, 150, 20))
-        self.pushButton = QtWidgets.QPushButton(self.frame2)
-        self.pushButton.setText("~")
-        self.pushButton.clicked.connect(self.choose_directory)
-        self.pushButton.setGeometry(QtCore.QRect(230, 20, 30, 20))
+        self.pushButton0 = QtWidgets.QPushButton(self.frame2)
+        self.pushButton0.setText("~")
+        self.pushButton0.clicked.connect(self.choose_directory)
+        self.pushButton0.setGeometry(QtCore.QRect(230, 20, 30, 20))
 
         # Name
         self.label = QtWidgets.QLabel('Person Name:', self.frame2)
@@ -131,6 +230,23 @@ class FaceRecognizerWindow(QtWidgets.QWidget):
         self.pushButton3.setText("Test")
         self.pushButton3.setGeometry(QtCore.QRect(250, 380, 60, 30))
         self.pushButton.clicked.connect(self.save_frame)
+        self.pushButton2.clicked.connect(self.training)
+        self.pushButton3.clicked.connect(self.test)
+        self.pushButton2.setEnabled(False)
+        self.pushButton3.setEnabled(False)
+
+        #Progress Bar
+        self.pbar = QtWidgets.QProgressBar(self)
+        self.pbar.setGeometry(50, 430, 200, 15)
+
+        # Status
+        self.label = QtWidgets.QLabel('Status:', self)
+        self.label.move(50,460)
+        self.label2 = QtWidgets.QLabel('None', self)
+        self.label2.move(100,460)
+        self.label2.resize(400,30)
+
+
 
         
 
@@ -155,9 +271,29 @@ class FaceRecognizerWindow(QtWidgets.QWidget):
         self.label1.setText(input_dir)
 
     def save_frame(self):
-        print("save")
-        self.iscapture = True
-        
+        if (self.textbox.text() == ""):
+            self.label2.setText("Please Set Person Name...")
+            print("save")
+
+        else:
+            self.iscapture = True
+    
+    def training(self):
+        self.label2.setText("Training...")
+        for i in range(101):
+              time.sleep(0.05)
+              self.pbar.setValue(i)
+        # self.pushButton3.setDisabled(False)
+        self.pushButton3.setDisabled(False)
+        self.label2.setText("Trained")
+
+    
+    def test(self):
+        # def closeEvent(self, event):
+        self.thread.stop()
+        # event.accept()
+        self.rw = RecognizerWindow()
+        self.rw.show()
 
 
         
@@ -174,15 +310,25 @@ class FaceRecognizerWindow(QtWidgets.QWidget):
         qt_img = self.convert_cv_qt(cv_img)
         if(self.iscapture):
             print("update")
-            if (not os.path.exists("face_dataframes")):
-                os.mkdir("face_dataframes")
-            cv2.imwrite("face_dataframes/person{0}.jpeg".format(self.count), cv_img)
+            direct = self.label1.text()
+            if direct == "~default":
+                direct = "face_dataframes"
+            else:
+                direct = direct + "/face_dataframes"
+          
+            if (not os.path.exists(direct)):
+                os.mkdir(direct)
+            cv2.imwrite("{1}/{2}{0}.jpeg".format(self.count, direct,self.textbox.text()), cv_img)
             self.iscapture = False
+            self.label2.setText("Image # 0{0} Saved".format(self.count))
+            self.pushButton0.setEnabled(False)
             self.count += 1
+            
         
         if(self.count == 6):
-            print("greater")
+            #print("greater")
             self.pushButton.setEnabled(False)
+            self.pushButton2.setDisabled(False)
 
 
         self.image_label.setPixmap(qt_img)
@@ -285,7 +431,7 @@ class App(QtWidgets.QMainWindow):
         self.checkbox2 = QtWidgets.QCheckBox("Gender Identification", self.frame2)
         self.checkbox2.setChecked(False)  # select by default
         self.checkbox2.move(10, 170)
-        self.checkbox3 = QtWidgets.QCheckBox("Face Recognition", self.frame2)
+        self.checkbox3 = QtWidgets.QCheckBox("Tracker", self.frame2)
         self.checkbox3.setChecked(False)  # select by default
         self.checkbox3.move(10, 200)
         x = self.checkbox3.isChecked()
@@ -313,8 +459,9 @@ class App(QtWidgets.QMainWindow):
 
     def model_choice(self,text):
         print("model selected", text)
-        self.fr = FaceRecognizerWindow()
-        self.fr.show()
+        if text == "Face Recognizer":
+            self.fr = FaceRecognizerWindow()
+            self.fr.show()
 
     def openChart(self):
         print("Clicked")
@@ -364,6 +511,7 @@ class MyFigureCanvas(FigureCanvas, anim.FuncAnimation):
 
         '''
         FigureCanvas.__init__(self, mpl_fig.Figure())
+        self.setWindowTitle("Analytics")
         # Range settings
         self._x_len_ = x_len
         self._y_range_ = y_range
@@ -407,8 +555,10 @@ def get_next_datapoint():
 
 if __name__=="__main__":
     app = QtWidgets.QApplication(sys.argv)
-    # a = App()
-    # a.show()
-    a = FaceRecognizerWindow()
+    a = App()
     a.show()
+    # a = FaceRecognizerWindow()
+    # a.show()
+    # rw = RecognizerWindow()
+    # rw.show()
     sys.exit(app.exec_())
